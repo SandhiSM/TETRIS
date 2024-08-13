@@ -107,7 +107,7 @@ class Minos:
                             stage[self.depth+i][self.x+1] = char
         return
 
-    def move(self, direction: str) -> None: # 動かせるという前提の下で実行する、moveを使う
+    def move(self, direction: str) -> None: # 動かせるという前提の下で実行する
         match direction:
             case "left":
                 self.deploy(remove=True)
@@ -117,7 +117,7 @@ class Minos:
                 self.deploy(remove=True)
                 self.x += 1
                 self.deploy()
-            case "rotate": # Oは来ない前提、条件設定が必要
+            case "rotate": # もっと条件設定が必要
                 self.deploy(remove=True)
                 if self.shape in {"I", "S", "Z"}:
                     self.rotated += 1 if self.rotated == 0 else -1
@@ -130,7 +130,7 @@ class Minos:
                 self.deploy()
         return
 
-    def drop(self) -> None: # ハードドロップ
+    def drop(self) -> None:
         while not self.down:
             self.move("down")
             self.flag()
@@ -152,6 +152,15 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        if self.depth >= 17:
+                            self.rotate = True
+                        else:
+                            for i in range(3):
+                                if stage[self.depth+i+1][self.x] == "=":
+                                    self.rotate = True
+                                    break
+                            else:
+                                self.rotate = False
                     case "O":
                         if self.x == 0:
                             self.left = True
@@ -180,6 +189,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True
                     case "T":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+1][self.x-1] == "=" else False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+2] == "=" else True if stage[self.depth+1][self.x+3] == "=" else False
@@ -192,6 +202,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+2][self.x] == "=" else False
                     case "S":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+1][self.x-1] == "=" else False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+3] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
@@ -204,6 +215,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
                     case "Z":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x-1] == "=" else True if stage[self.depth+1][self.x] == "=" else False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+2] == "=" else True if stage[self.depth+1][self.x+3] == "=" else False
@@ -216,6 +228,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+2][self.x] == "=" else False
                     case "J":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x-1] == "=" else True if stage[self.depth+1][self.x-1] == "=" else False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth+1][self.x+3] == "=" else False
@@ -228,6 +241,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth+2][self.x] == "=" else False
                     case "L":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth+1][self.x-1] == "=" else False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+3] == "=" else True if stage[self.depth+1][self.x+3] == "=" else False
@@ -240,6 +254,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+2][self.x] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
             case 1:
                 match self.shape:
                     case "I":
@@ -262,6 +277,15 @@ class Minos:
                             else:
                                 self.right = False
                         self.down = True if (self.depth+4) == 20  else True if stage[self.depth+4][self.x] == "=" else False
+                        if self.x >= 7:
+                            self.rotate = True
+                        else:
+                            for i in range(3):
+                                if stage[self.depth][self.x+i+1] == "=":
+                                    self.rotate = True
+                                    break
+                            else:
+                                self.rotate = False
                     case "T":
                         if self.x == 0:
                             self.left = True
@@ -274,14 +298,17 @@ class Minos:
                                 self.left = False
                         self.right = True if (self.x+1) == 9 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth+1][self.x+2] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
                         self.down = True if (self.depth+2) == 19 else True if stage[self.depth+3][self.x] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth][self.x+2] == "=" else False
                     case "S":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x-1] == "=" else True if stage[self.depth+1][self.x-1] == "=" else True if stage[self.depth+2][self.x] == "=" else False
                         self.right = True if (self.x+1) == 9 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth+1][self.x+2] == "=" else True if stage[self.depth+2][self.x+2] == "=" else False
                         self.down = True if (self.depth+2) == 19 else True if stage[self.depth+2][self.x] == "=" else True if stage[self.depth+3][self.x+1] == "=" else False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth][self.x+2] == "=" else False
                     case "Z":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+1][self.x-1] == "=" else True if stage[self.depth+2][self.x-1] == "=" else False
                         self.right = True if (self.x+1) == 9 else True if stage[self.depth][self.x+2] == "=" else True if stage[self.depth+1][self.x+2] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
                         self.down = True if (self.depth+2) == 19 else True if stage[self.depth+3][self.x] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
                     case "J":
                         if self.x == 0:
                             self.left = True
@@ -294,6 +321,7 @@ class Minos:
                                 self.left = False
                         self.right = True if (self.x+1) == 9 else True if stage[self.depth][self.x+2] == "=" else True if stage[self.depth+1][self.x+1] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
                         self.down = True if (self.depth+2) == 19 else True if stage[self.depth+3][self.x] == "=" else True if stage[self.depth+1][self.x+1] == "=" else False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth][self.x+2] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
                     case "L":
                         if self.x == 0:
                             self.left = True
@@ -314,12 +342,14 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth][self.x+1] == "=" else True if stage[self.depth][self.x+2] == "=" else False
             case 2:
                 match self.shape:
                     case "T":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x-1] == "=" else True if stage[self.depth+1][self.x] == "=" else False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+3] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
                         self.down = True if (self.depth+1) == 19 else True if stage[self.depth+2][self.x+1] == "=" else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
                     case "J":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x-1] == "=" else True if stage[self.depth+1][self.x+1] == "=" else False
                         if (self.x+2) == 9:
@@ -332,6 +362,7 @@ class Minos:
                             else:
                                 self.right = False
                         self.down = True if (self.depth+1) == 19 else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+1][self.x+1] == "=" else True if stage[self.depth+2][self.x+2] == "=" else False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth+1][self.x+1] == "=" else True if stage[self.depth+2][self.x+1] == "=" else True if stage[self.depth+2][self.x] == "=" else False
                     case "L":
                         if self.x == 0:
                             self.left = True
@@ -344,6 +375,7 @@ class Minos:
                                 self.left = False
                         self.right = True if (self.x+2) == 9 else True if stage[self.depth][self.x+3] == "=" else True if stage[self.depth+1][self.x+1] == "=" else False
                         self.down = True if (self.depth+1) == 19 else True if stage[self.depth+2][self.x] == "=" else True if stage[self.depth+1][self.x+1] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
+                        self.rotate = True if self.depth >= 18 else True if stage[self.depth+1][self.x+1] == "=" else True if stage[self.depth+2][self.x+1] == "=" else False
             case 3:
                 match self.shape:
                     case "T":
@@ -358,6 +390,7 @@ class Minos:
                             else:
                                 self.right = False
                         self.down = True if (self.depth+2) == 19 else True if stage[self.depth+3][self.x+1] == "=" else True if stage[self.depth+2][self.x] == "=" else False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth+1][self.x+2] == "=" else False
                     case "J":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+2][self.x-1] == "=" else False
                         if (self.x+1) == 9:
@@ -378,6 +411,7 @@ class Minos:
                                     break
                             else:
                                 self.down = False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth][self.x] == "=" else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+1][self.x+2] == "=" else False
                     case "L":
                         self.left = True if self.x == 0 else True if stage[self.depth][self.x-1] == "=" else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+2][self.x] == "=" else False
                         if (self.x+1) == 9:
@@ -390,6 +424,7 @@ class Minos:
                             else:
                                 self.right = False
                         self.down = True if (self.depth+2) == 19 else True if stage[self.depth+3][self.x+1] == "=" else True if stage[self.depth+1][self.x] == "=" else False
+                        self.rotate = True if self.x >= 8 else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+1][self.x+2] == "=" else True if stage[self.depth][self.x+2] == "=" else False
         return
 
 stage: list[list[str]] = [
@@ -414,6 +449,20 @@ stage: list[list[str]] = [
 [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
 [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "]
 ]
+DELIMITER: str = " "*10 + "-"*6
+SPACE: str = " "*9 + "|" + " "*6 + "|"
+I: str = " "*9 + "| " + "="*4 + " |"
+O: str = " "*9 + "|  " + "="*2 + "  |"
+T0: str = " "*9 + "|  " + "=" + "   |"
+T1: str = " "*9 + "| " + "="*3 + "  |"
+S0: str = " "*9 + "|  " + "="*2 + "  |"
+S1: str = " "*9 + "| " + "="*2 + "   |"
+Z0: str = " "*9 + "| " + "="*2 + "   |"
+Z1: str = " "*9 + "|  " + "="*2 + "  |"
+J0: str = " "*9 + "| " + "=" + "    |"
+J1: str = " "*9 + "| " + "="*3 + "  |"
+L0: str = " "*9 + "|   " + "=" + "  |"
+L1: str = " "*9 + "| " + "="*3 + "  |"
 
 def game() -> None:
     global stage
@@ -426,20 +475,23 @@ def game() -> None:
                     flag()
                     if not mino.left:
                         mino.move("left")
-                    print_stage()
-                    sleep()
+                        flag()
+                        print_stage()
+                        sleep()
                 case "right":
                     flag()
                     if not mino.right:
                         mino.move("right")
-                    print_stage()
-                    sleep()
+                        flag()
+                        print_stage()
+                        sleep()
                 case "up":
                     flag()
                     if not mino.rotate:
                         mino.move("rotate")
-                    print_stage()
-                    sleep()
+                        flag()
+                        print_stage()
+                        sleep()
                 case "down":
                     mino.drop()
                     print_stage()
@@ -465,30 +517,18 @@ def game() -> None:
 
     def line() -> None:
         nonlocal point, level
+        row: int = 0
         for i in range(20):
             if " " not in stage[i]:
+                row += 1
                 stage.pop(i)
                 stage.insert(0, [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "])
-                point += ((100 + level) % level) * 100 if level != 0 else 100
-                if level != 10:
+                point += (level * 100) * row if level != 0 else 100
+                if level != 19:
                     level += 1 if point % 1000 == 0 else 0
         return
 
     def print_stage() -> None:
-        DELIMITER: str = " "*10 + "-"*6
-        SPACE: str = " "*9 + "|" + " "*6 + "|"
-        I: str = " "*9 + "| " + "="*4 + " |"
-        O: str = " "*9 + "|  " + "="*2 + "  |"
-        T0: str = " "*9 + "|  " + "=" + "   |"
-        T1: str = " "*9 + "| " + "="*3 + "  |"
-        S0: str = " "*9 + "|  " + "="*2 + "  |"
-        S1: str = " "*9 + "| " + "="*2 + "   |"
-        Z0: str = " "*9 + "| " + "="*2 + "   |"
-        Z1: str = " "*9 + "|  " + "="*2 + "  |"
-        J0: str = " "*9 + "| " + "=" + "    |"
-        J1: str = " "*9 + "| " + "="*3 + "  |"
-        L0: str = " "*9 + "|   " + "=" + "  |"
-        L1: str = " "*9 + "| " + "="*3 + "  |"
         os.system("cls")
         print("-"*25)
         for (i, s) in enumerate(stage, 0):
@@ -637,9 +677,8 @@ def game() -> None:
         line()
         mino.flag()
         if mino.down:
-            print_stage()
-            print("Game Over")
             alive = False
+            print_stage()
             save() if not paused else None
             break
         while (not mino.down) & alive:
@@ -654,16 +693,17 @@ def game() -> None:
     key.join()
     return
 
-def result() -> None:
+def result(game: bool=False) -> None:
     os.system("cls")
     data: list[dict[str:str]] = file("read")
     if data == []:
-        print("データがありません。")
+        print("- - -  N O  D A T A  - - -")
     else:
-        print("---今までの成績---")
+        print("- - - G A M E  O V E R  - - -") if game else None
+        print("- - -  R E S U L T  - - -\n")
         for d in data:
             print(f"{d["date"]}: {d["point"]}")
-    print("[escキーで戻ります]")
+    print("\n[P R E S S  E S C  K E Y  T O  R E T U R N]")
     while True:
         if keyboard.read_key() == "esc":
             break
@@ -672,15 +712,15 @@ def result() -> None:
 def operation() -> None:
     os.system("cls")
     print("""
----操作方法---
+- - -  H O W  T O  P L A Y  T H I S  G A M E  - - -
 
-右・左矢印キー: ブロックの移動
-下矢印キー: ブロックの落下
-上矢印キー: ブロックの回転
-Spaceキー: ホールド
-escキー: ポーズ
+LEFT AND RIGHT ARROW KEY: MOVE MINO
+          DOWN ARROW KEY: DROP MINO (HARD DROP)
+            UP ARROW KEY: ROTATE MINO
+               SPACE KEY: HOLD MINO (NOT IMPLEMENTED)
+                 ESC KEY: PAUSE GAME
 
-[escキーで戻ります]
+[E S C  K E Y  T O  R E T U R N]
 """)
     while True:
         if keyboard.read_key() == "esc":
@@ -695,10 +735,10 @@ def main() -> None:
         print(f"""
 TETRIS
 
-[{selector[0]}] プレイ
-[{selector[1]}] 結果参照
-[{selector[2]}] 操作方法
-[{selector[3]}] 終了
+[{selector[0]}] P L A Y
+[{selector[1]}] R E S U L T
+[{selector[2]}] O P E R A T I O N
+[{selector[3]}] Q U I T
 """)
         return
     print_start()
@@ -721,8 +761,18 @@ TETRIS
             case "space":
                 match current:
                     case 0:
-                        sleep()
+                        os.system("cls")
+                        print("3")
+                        time.sleep(1)
+                        os.system("cls")
+                        print("2")
+                        time.sleep(1)
+                        os.system("cls")
+                        print("1")
+                        time.sleep(1)
+                        os.system("cls")
                         game()
+                        result(game=True)
                         print_start()
                     case 1:
                         result()
