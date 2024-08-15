@@ -162,4 +162,4 @@ cython_debug/
 #.idea/
 
 # Unneccesary files
-data.json
+*.dat

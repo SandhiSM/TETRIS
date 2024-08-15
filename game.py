@@ -5,7 +5,7 @@ import random
 import threading
 import time
 
-sleep = lambda: time.sleep(0.2)
+sleep = lambda: time.sleep(0.12)
 
 class Minos:
     def __init__(self, shape: str) -> None:
@@ -105,29 +105,6 @@ class Minos:
                         stage[self.depth][self.x] = char
                         for i in range(3):
                             stage[self.depth+i][self.x+1] = char
-        return
-
-    def move(self, direction: str) -> None: # 動かせるという前提の下で実行する
-        match direction:
-            case "left":
-                self.deploy(remove=True)
-                self.x -= 1
-                self.deploy()
-            case "right":
-                self.deploy(remove=True)
-                self.x += 1
-                self.deploy()
-            case "rotate": # もっと条件設定が必要
-                self.deploy(remove=True)
-                if self.shape in {"I", "S", "Z"}:
-                    self.rotated += 1 if self.rotated == 0 else -1
-                else:
-                    self.rotated += 1 if self.rotated != 3 else -3
-                self.deploy()
-            case "down":
-                self.deploy(remove=True)
-                self.depth += 1
-                self.deploy()
         return
 
     def drop(self) -> None:
@@ -427,6 +404,93 @@ class Minos:
                         self.rotate = True if self.x >= 8 else True if stage[self.depth+1][self.x] == "=" else True if stage[self.depth+1][self.x+2] == "=" else True if stage[self.depth][self.x+2] == "=" else False
         return
 
+    def hold(self, shape: str) -> bool:
+        can: bool = False
+        self.deploy(remove=True)
+        match shape:
+            case "I":
+                if self.x+3 <= 9:
+                    for i in range(3):
+                        if stage[self.depth][self.x+i] == "=":
+                            break
+                    else:
+                        can = True
+            case "O":
+                if self.x+1 <= 9:
+                    for i in range(2):
+                        for j in range(2):
+                            if stage[self.depth+i][self.x+j] == "=":
+                                break
+                    else:
+                        can = True
+            case "T":
+                if (self.x+2 <= 9) & (stage[self.depth][self.x+1] != "="):
+                    for i in range(3):
+                        if stage[self.depth+1][self.x+i] == "=":
+                            break
+                    else:
+                        can = True
+            case "S":
+                if self.x+2 <= 9:
+                    for i in range(2):
+                        for j in range(2):
+                            if stage[self.depth+i][self.x-i+j+1] == "=":
+                                break
+                    else:
+                        can = True
+            case "Z":
+                if self.x+2 <= 9:
+                    for i in range(2):
+                        for j in range(2):
+                            if stage[self.depth+i][self.x+i+j] == "=":
+                                break
+                    else:
+                        can = True
+            case "J":
+                if (self.x+2 <= 9) & (stage[self.depth][self.x] != "="):
+                    for i in range(3):
+                        if stage[self.depth+1][self.x+i] == "=":
+                            break
+                    else:
+                        can = True
+            case "L":
+                if (self.x+2 <= 9) & (stage[self.depth][self.x+2] != "="):
+                    for i in range(3):
+                        if stage[self.depth+1][self.x+i] == "=":
+                            break
+                    else:
+                        can = True
+        if can:
+            self.shape = shape
+            self.rotated = 0
+            self.deploy()
+            return True
+        else:
+            return False
+
+    def move(self, direction: str) -> None:
+        match direction:
+            case "left":
+                self.deploy(remove=True)
+                self.x -= 1
+                self.deploy()
+            case "right":
+                self.deploy(remove=True)
+                self.x += 1
+                self.deploy()
+            case "rotate":
+                self.deploy(remove=True)
+                if self.shape in {"I", "S", "Z"}:
+                    self.rotated += 1 if self.rotated == 0 else -1
+                else:
+                    self.rotated += 1 if self.rotated != 3 else -3
+                self.deploy()
+            case "down":
+                self.deploy(remove=True)
+                self.depth += 1
+                self.deploy()
+        return
+
 stage: list[list[str]] = [
 [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
 [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
@@ -467,8 +531,7 @@ L1: str = " "*9 + "| " + "="*3 + "  |"
 def game() -> None:
     global stage
     def key_input():
-        nonlocal mino, hold, pause, alive, paused
-        flag = lambda: mino.flag()
+        nonlocal mino, hold, pause, alive, paused, index, can
         while alive:
             match keyboard.read_key():
                 case "left":
@@ -497,8 +560,22 @@ def game() -> None:
                     print_stage()
                     sleep()
                 case "space":
-                    hold = mino.shape
-                    # 今後いろいろ実装
+                    if can:
+                        old = hold
+                        if hold == "N":
+                            hold = mino.shape
+                            if mino.hold(shape=shapes[index]):
+                                index += 1
+                                can = False
+                            else:
+                                hold = old
+                        else:
+                            hold = mino.shape
+                            if mino.hold(shape=old):
+                                can = False
+                            else:
+                                hold = old
+                    print_stage()
                 case "esc":
                     pause = True
                     paused = True
@@ -525,7 +602,7 @@ def game() -> None:
                 stage.insert(0, [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "])
                 point += (level * 100) * row if level != 0 else 100
                 if level != 19:
-                    level += 1 if point % 1000 == 0 else 0
+                    level = point // 1000
         return
 
     def print_stage() -> None:
@@ -538,6 +615,7 @@ def game() -> None:
                     print(" "*8 + f"P O I N T: {point}")
                 case 3:
                     print(" "*8 + f"L E V E L: {level}")
+                case 4: print(" "*8 + hold) # for test
                 case 5:
                     print(" "*8 + "H O L D")
                 case 6:
@@ -585,7 +663,7 @@ def game() -> None:
                 case 12:
                     print(DELIMITER)
                 case 13:
-                    match shapes[index+1] if index != 6 else shapes[0]:
+                    match shapes[index]:
                         case "I":
                             print(I)
                         case "O":
@@ -601,7 +679,7 @@ def game() -> None:
                         case "L":
                             print(L0)
                 case 14:
-                    match shapes[index+1] if index != 6 else shapes[0]:
+                    match shapes[index]:
                         case "I":
                             print(DELIMITER)
                         case "O":
@@ -617,7 +695,7 @@ def game() -> None:
                         case "L":
                             print(L1)
                 case 15:
-                    match shapes[index+1] if index != 6 else shapes[0]:
+                    match shapes[index]:
                         case "I":
                             print()
                         case _:
@@ -642,8 +720,9 @@ def game() -> None:
     point: float = 0.0
     level: int = 0
     index: int = 0
-    hold: str = "N" # (I, O, T, S, Z, J, L, N(=None)) おいおい実装
+    hold: str = "N" # (I, O, T, S, Z, J, L, N(=None))
     alive: bool = True
+    can: bool = True
     pause: bool = False
     paused: bool= False
     stage = [
@@ -668,14 +747,21 @@ def game() -> None:
 [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
 [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "]
 ]
+    flag = lambda: mino.flag()
+    shuffle = lambda: random.shuffle(shapes)
     key = threading.Thread(target=key_input, daemon=True)
+
     key.start()
+    shuffle()
     while True:
-        random.shuffle(shapes) if index == 0 else None
         print_stage()
         mino: Minos = Minos(shapes[index])
+        index += 1
+        if index == 7:
+            shuffle()
+            index = 0
         line()
-        mino.flag()
+        flag()
         if mino.down:
             alive = False
             print_stage()
@@ -683,12 +769,12 @@ def game() -> None:
             break
         while (not mino.down) & alive:
             print_stage()
-            time.sleep(2 - level * 0.1) # 落下速度がここで変わる
+            time.sleep(2 - level * 0.1)
             mino.move("down") if (not mino.down) & (not pause) else None
-            mino.flag()
+            flag()
+        can = True
         line()
         print_stage()
-        index += 1 if index != 6 else -6
         sleep()
     key.join()
     return
@@ -704,8 +790,12 @@ def result(game: bool=False) -> None:
         for d in data:
             print(f"{d["date"]}: {d["point"]}")
     print("\n[P R E S S  E S C  K E Y  T O  R E T U R N]")
+    print("[P R E S S  D E L  K E Y  T O  D E L E T E  S A V E  D A T A]")
     while True:
         if keyboard.read_key() == "esc":
+            break
+        elif keyboard.read_key() == "del":
+            file("write", [])
             break
     return
 
@@ -785,11 +875,11 @@ TETRIS
 
 def file(mode: str, data: list[dict[str:str]]=None) -> list[dict[str:str]] | None:
     if mode == "read":
-        with open("data.json", encoding="UTF-8") as f:
+        with open("save.dat", encoding="UTF-8") as f:
             save: list[dict[str:str]] = json.load(f)
         return save
     else:
-        with open("data.json", "w", encoding="UTF-8") as f:
+        with open("save.dat", "w", encoding="UTF-8") as f:
             json.dump(data, f) if data != None else None
         return
 
