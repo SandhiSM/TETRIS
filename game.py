@@ -1,22 +1,23 @@
-import keyboard
+import copy
 import json
+import keyboard # required
 import os
 import random
 import threading
 import time
-
-sleep = lambda: time.sleep(0.12)
+import traceback
+import winsound
 
 class Minos:
     def __init__(self, shape: str) -> None:
-        self.shape: str = shape
-        self.x: int = 4 if shape in {"O", "Z"} else 3
         self.depth: int = 0
-        self.rotated: int = 0
+        self.down: bool = False
         self.left: bool = False
         self.right: bool = False
-        self.down: bool = False
         self.rotate: bool = False
+        self.rotated: int = 0
+        self.shape: str = shape
+        self.x: int = 4 if shape in {"O", "Z"} else 3
         self.deploy()
         return
 
@@ -491,47 +492,9 @@ class Minos:
                 self.deploy()
         return
 
-stage: list[list[str]] = [
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "]
-]
-DELIMITER: str = " "*10 + "-"*6
-SPACE: str = " "*9 + "|" + " "*6 + "|"
-I: str = " "*9 + "| " + "="*4 + " |"
-O: str = " "*9 + "|  " + "="*2 + "  |"
-T0: str = " "*9 + "|  " + "=" + "   |"
-T1: str = " "*9 + "| " + "="*3 + "  |"
-S0: str = " "*9 + "|  " + "="*2 + "  |"
-S1: str = " "*9 + "| " + "="*2 + "   |"
-Z0: str = " "*9 + "| " + "="*2 + "   |"
-Z1: str = " "*9 + "|  " + "="*2 + "  |"
-J0: str = " "*9 + "| " + "=" + "    |"
-J1: str = " "*9 + "| " + "="*3 + "  |"
-L0: str = " "*9 + "|   " + "=" + "  |"
-L1: str = " "*9 + "| " + "="*3 + "  |"
-
 def game() -> None:
-    global stage
-    def key_input():
-        nonlocal mino, hold, pause, alive, paused, index, can
+    def key_input() -> None:
+        nonlocal alive, can, hold, index, pause, paused
         while alive:
             match keyboard.read_key():
                 case "left":
@@ -560,18 +523,19 @@ def game() -> None:
                     print_stage()
                     sleep()
                 case "space":
+                    flag()
                     if can:
                         old = hold
                         if hold == "N":
                             hold = mino.shape
-                            if mino.hold(shape=shapes[index]):
-                                index += 1
+                            if mino.hold(shape=shapes[index]) if (not mino.left) & (not mino.right) & (not mino.down) else False:
+                                index += 1 if index != 6 else -6
                                 can = False
                             else:
                                 hold = old
                         else:
                             hold = mino.shape
-                            if mino.hold(shape=old):
+                            if mino.hold(shape=old) if (not mino.left) & (not mino.right) & (not mino.down) else False:
                                 can = False
                             else:
                                 hold = old
@@ -590,19 +554,25 @@ def game() -> None:
                             case "q":
                                 pause = False
                                 alive = False
+                                sleep()
                                 break
+        return
 
     def line() -> None:
-        nonlocal point, level
+        nonlocal level, point
         row: int = 0
         for i in range(20):
             if " " not in stage[i]:
                 row += 1
                 stage.pop(i)
                 stage.insert(0, [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "])
-                point += (level * 100) * row if level != 0 else 100
-                if level != 19:
-                    level = point // 1000
+                point += level * 100 * row if level != 0 else 100 * row
+                if level <= 15:
+                    level = point // 10000
+                else:
+                    level = 15
+        if stage[19] == [" ", " ", " ", " ", " ", " ", " ", " ", " ", " "]:
+            point += level * 1000 if level != 0 else 1000
         return
 
     def print_stage() -> None:
@@ -615,7 +585,6 @@ def game() -> None:
                     print(" "*8 + f"P O I N T: {point}")
                 case 3:
                     print(" "*8 + f"L E V E L: {level}")
-                case 4: print(" "*8 + hold) # for test
                 case 5:
                     print(" "*8 + "H O L D")
                 case 6:
@@ -715,44 +684,25 @@ def game() -> None:
         data: list[dict[str:str]] = file("read")
         data.append({"date": f"{time.strftime("%Y-%m-%d %H:%M:%S")}", "point": point})
         file("write", data)
+        return
 
-    shapes: list[str] = ["I", "O", "T", "S", "Z", "J", "L"]
-    point: float = 0.0
-    level: int = 0
-    index: int = 0
-    hold: str = "N" # (I, O, T, S, Z, J, L, N(=None))
+    global stage
     alive: bool = True
     can: bool = True
+    flag = lambda: mino.flag()
+    hold: str = "N"
+    index: int = 0
+    key = threading.Thread(target=key_input, daemon=True)
+    level: int = 0
     pause: bool = False
     paused: bool= False
-    stage = [
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
-[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "]
-]
-    flag = lambda: mino.flag()
+    point: float = 0.0
+    shapes: list[str] = ["I", "O", "T", "S", "Z", "J", "L"]
     shuffle = lambda: random.shuffle(shapes)
-    key = threading.Thread(target=key_input, daemon=True)
-
+    stage = copy.deepcopy(STAGE)
     key.start()
     shuffle()
+    winsound.PlaySound("bgm.wav", winsound.SND_FILENAME | winsound.SND_ASYNC | winsound.SND_LOOP)
     while True:
         print_stage()
         mino: Minos = Minos(shapes[index])
@@ -777,11 +727,12 @@ def game() -> None:
         print_stage()
         sleep()
     key.join()
+    winsound.PlaySound(None, winsound.SND_PURGE)
     return
 
 def result(game: bool=False) -> None:
-    os.system("cls")
     data: list[dict[str:str]] = file("read")
+    os.system("cls")
     if data == []:
         print("- - -  N O  D A T A  - - -")
     else:
@@ -790,11 +741,12 @@ def result(game: bool=False) -> None:
         for d in data:
             print(f"{d["date"]}: {d["point"]}")
     print("\n[P R E S S  E S C  K E Y  T O  R E T U R N]")
-    print("[P R E S S  D E L  K E Y  T O  D E L E T E  S A V E  D A T A]")
+
+    print("[P R E S S  B A C K S P A C E  K E Y  T O  D E L E T E  S A V E  D A T A]")
     while True:
         if keyboard.read_key() == "esc":
             break
-        elif keyboard.read_key() == "del":
+        elif keyboard.read_key() == "backspace":
             file("write", [])
             break
     return
@@ -817,8 +769,6 @@ LEFT AND RIGHT ARROW KEY: MOVE MINO
             break
     return
 
-selector: list[str] = [">", " ", " ", " "]
-
 def main() -> None:
     def print_start() -> None:
         os.system("cls")
@@ -831,6 +781,7 @@ TETRIS
 [{selector[3]}] Q U I T
 """)
         return
+
     print_start()
     while True:
         current: int = selector.index(">")
@@ -883,5 +834,46 @@ def file(mode: str, data: list[dict[str:str]]=None) -> list[dict[str:str]] | Non
             json.dump(data, f) if data != None else None
         return
 
+STAGE: list[list[str]] = [
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "],
+[" ", " ", " ", " ", " ", " ", " ", " ", " ", " "]
+]
+DELIMITER: str = " "*10 + "-"*6
+SPACE: str = " "*9 + "|" + " "*6 + "|"
+I: str = " "*9 + "| " + "="*4 + " |"
+O: str = " "*9 + "|  " + "="*2 + "  |"
+T0: str = " "*9 + "|  " + "=" + "   |"
+T1: str = " "*9 + "| " + "="*3 + "  |"
+S0: str = " "*9 + "|  " + "="*2 + "  |"
+S1: str = " "*9 + "| " + "="*2 + "   |"
+Z0: str = " "*9 + "| " + "="*2 + "   |"
+Z1: str = " "*9 + "|  " + "="*2 + "  |"
+J0: str = " "*9 + "| " + "=" + "    |"
+J1: str = " "*9 + "| " + "="*3 + "  |"
+L0: str = " "*9 + "|   " + "=" + "  |"
+L1: str = " "*9 + "| " + "="*3 + "  |"
+selector: list[str] = [">", " ", " ", " "]
+sleep = lambda: time.sleep(0.12)
 if __name__ == "__main__":
-    main()
+    try: main()
+    except Exception:
+        with open("error.log", "w", encoding="UTF-8") as f:
+            f.write(f"{time.strftime("%Y-%m-%d %H:%M:%S")}\n{traceback.format_exc()}")
